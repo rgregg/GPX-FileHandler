@@ -21,6 +21,12 @@ namespace MVCO365Demo.Utils
 
         public const string SavedFormDataName = "FILEHANDLER_FORMDATA";
 
+        static AADAppSettings()
+        {
+            System.Diagnostics.Debug.Assert(!_clientId.Equals("[clientId]"), "You must specify an AAD application client-id before running this project.");
+            System.Diagnostics.Debug.Assert(!_appKey.Equals("[secret]"), "You must specify the AAD application app key before running this project.");
+        }
+
         public static string ClientId
         {
             get
