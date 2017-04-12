@@ -228,6 +228,10 @@
     <Compile Include="Utils\FormDataCookie.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="App_Data\ADALTokenCacheDb.mdf" />
+    <Content Include="App_Data\ADALTokenCacheDb_log.ldf">
+      <DependentUpon>ADALTokenCacheDb.mdf</DependentUpon>
+    </Content>
     <Content Include="Content\bootstrap-theme.css" />
     <Content Include="Content\bootstrap-theme.min.css" />
     <Content Include="Content\bootstrap.css" />
@@ -297,7 +301,6 @@
     <Content Include="Scripts\jquery-2.1.1.min.map" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="App_Data\" />
     <Folder Include="Views\Account\" />
   </ItemGroup>
   <ItemGroup>
