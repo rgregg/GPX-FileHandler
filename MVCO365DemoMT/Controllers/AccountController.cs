@@ -60,8 +60,8 @@ namespace MVCO365Demo.Controllers
             string strResource = Request.QueryString["resource"];
             string strRedirectController = Request.QueryString["redirect"];
 
-            string authorizationRequest = String.Format(
-                AADAppSettings.ConsentUri,
+            string authorizationRequest = String.Format("",
+                //AADAppSettings.ConsentUri,
                     Uri.EscapeDataString(AADAppSettings.ClientId),
                     Uri.EscapeDataString(strResource),
                     Uri.EscapeDataString(String.Format("{0}/{1}", this.Request.Url.GetLeftPart(UriPartial.Authority).ToString(), strRedirectController))
@@ -99,8 +99,8 @@ namespace MVCO365Demo.Controllers
                 strRedirectController = "Home/Index";
             }
 
-            string authorizationRequest = String.Format(
-                AADAppSettings.AdminConsentUri,
+            string authorizationRequest = String.Format("", 
+                //AADAppSettings.AdminConsentUri,
                     Uri.EscapeDataString(AADAppSettings.ClientId),
                     Uri.EscapeDataString(strResource),
                     Uri.EscapeDataString(String.Format("{0}/{1}", this.Request.Url.GetLeftPart(UriPartial.Authority).ToString(), strRedirectController)),

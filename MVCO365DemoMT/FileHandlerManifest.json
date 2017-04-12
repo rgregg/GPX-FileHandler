@@ -1,0 +1,31 @@
+﻿
+{
+    "value": [
+        {
+            "type": "FileHandler",
+            "properties": [
+                {
+                    "key": "extension",
+                    "value": "gpx"
+                },
+                {
+                    "key": "fileIcon",
+                    "value": "https://localhost:44312/Content/pinpoint-16x16.png"
+                },
+				{
+                    "key": "newFileUrl",
+                    "value": "https://localhost:44312/FileHandler/Open"
+                },
+
+                {
+                    "key": "openUrl",
+                    "value": "https://localhost:44312/FileHandler/Open"
+                },
+                {
+                    "key": "previewUrl",
+                    "value": "https://localhost:44312/FileHandler/Preview"
+                }
+            ]
+        }
+    ]
+}

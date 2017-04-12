@@ -26,7 +26,7 @@ namespace MVCO365Demo.Controllers
             var userObjectId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier").Value;
             var tenantId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
             String token = null;
-            AuthenticationContext authContext = new AuthenticationContext(string.Format(AADAppSettings.AuthorizationUri, tenantId), new ADALTokenCache(signInUserId));
+            AuthenticationContext authContext = new AuthenticationContext(AADAppSettings.Authority, new InMemoryTokenCache(signInUserId));
             AuthenticationResult authResult = null;
 
             try
@@ -62,23 +62,26 @@ namespace MVCO365Demo.Controllers
         public async Task<ActionResult> Open()
         {
             ActivationParameters parameters = this.LoadActivationParameters();
-
-            string test = HttpContext.User.Identity.Name;
             await HttpContext.GetOwinContext().Authentication.AuthenticateAsync(OpenIdConnectAuthenticationDefaults.AuthenticationType);
 
             //load activation parameters and all the stuff you need to get a token
             var signInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.NameIdentifier).Value;
             var userObjectId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier").Value;
             var tenantId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
+
+            Console.WriteLine($"FileHandler invoked, user unique ID: {userObjectId}");
+
             String token = null;
-            AuthenticationContext authContext = new AuthenticationContext(string.Format(AADAppSettings.AuthorizationUri, tenantId), new ADALTokenCache(signInUserId));
+            AuthenticationContext authContext = new AuthenticationContext(AADAppSettings.Authority, new InMemoryTokenCache(signInUserId));
             AuthenticationResult authResult = null;
             Session[AADAppSettings.SavedFormDataName] = parameters;
 
             try
             {
                 //grab the token
-                authResult = await authContext.AcquireTokenSilentAsync(parameters.ResourceId, new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey), new UserIdentifier(userObjectId, UserIdentifierType.UniqueId));
+                authResult = await authContext.AcquireTokenSilentAsync(parameters.ResourceId, 
+                    new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey), 
+                    new UserIdentifier(userObjectId, UserIdentifierType.UniqueId));
                 token = authResult.AccessToken;
 
                 //assemble request to get the file
@@ -121,23 +124,23 @@ namespace MVCO365Demo.Controllers
             //grab all the stuff you need to get a token
             var signInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.NameIdentifier).Value;
             var userObjectId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier").Value;
-            var tenantId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
-            String token = null;
-            AuthenticationContext authContext = new AuthenticationContext(string.Format(AADAppSettings.AuthorizationUri, tenantId), new ADALTokenCache(signInUserId));
-            AuthenticationResult authResult = null;
-            Stream fileStream = null;
+            //var tenantId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
+
+            AuthenticationContext authContext = new AuthenticationContext(AADAppSettings.Authority, new InMemoryTokenCache(signInUserId));
 
             //change the name in the file
             gpxUtils = Session[DocumentKey] as GPXHelper;
             gpxUtils.setTitle(newName);
 
+            Stream fileStream = null;
             try
             {
                 //grab activation parameters (this was set in Open controller)
                 ActivationParameters parameters = Session[AADAppSettings.SavedFormDataName] as ActivationParameters;
+
                 //grab token
-                authResult = await authContext.AcquireTokenSilentAsync(parameters.ResourceId, new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey), new UserIdentifier(userObjectId, UserIdentifierType.UniqueId));
-                token = authResult.AccessToken;
+                var authResult = await authContext.AcquireTokenSilentAsync(parameters.ResourceId, new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey), new UserIdentifier(userObjectId, UserIdentifierType.UniqueId));
+                var token = authResult.AccessToken;
 
                 //create request to write file back to server
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(parameters.FilePut);

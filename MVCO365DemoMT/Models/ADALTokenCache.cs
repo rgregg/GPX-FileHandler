@@ -24,20 +24,22 @@ namespace MVCO365Demo.Models
     public class ADALTokenCache : TokenCache
     {
         private ApplicationDbContext db = new ApplicationDbContext();
-        string User;
-        UserTokenCache Cache;
+        private UserTokenCache Cache;
+
+        public string User { get; set; }
 
         // constructor
         public ADALTokenCache(string user)
         {
             // associate the cache to the current user of the web app
-            User = user;
+            this.User = user;
             this.AfterAccess = AfterAccessNotification;
             this.BeforeAccess = BeforeAccessNotification;
             this.BeforeWrite = BeforeWriteNotification;
 
             // look up the entry in the DB
             Cache = db.UserTokenCacheList.FirstOrDefault(c => c.webUserUniqueId == User);
+
             // place the entry in memory
             this.Deserialize((Cache == null) ? null : Cache.cacheBits);
         }
@@ -92,6 +94,7 @@ namespace MVCO365Demo.Models
                 Cache.webUserUniqueId = User;
                 Cache.cacheBits = this.Serialize();
                 Cache.LastWrite = DateTime.Now;
+                
                 //// update the DB and the lastwrite                
                 db.Entry(Cache).State = Cache.UserTokenCacheId == 0 ? EntityState.Added : EntityState.Modified;
                 db.SaveChanges();

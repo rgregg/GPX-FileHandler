@@ -18,7 +18,6 @@ using System;
 using System.IdentityModel.Claims;
 using System.Threading.Tasks;
 using System.Web;
-using Kentor.OwinCookieSaver;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Owin;
 using Microsoft.Owin.Security;
@@ -32,22 +31,9 @@ namespace MVCO365Demo
 {
     public partial class Startup
     {
-        class ConditionalMiddlewareInvoker : OwinMiddleware
-        {
-            public ConditionalMiddlewareInvoker(OwinMiddleware next)
-                : base(next) { }
-
-            public async override Task Invoke(IOwinContext context)
-            {
-                await (new KentorOwinCookieSaverMiddleware(Next)).Invoke(context);
-            }
-        }
-
         public void ConfigureAuth(IAppBuilder app)
         {
             app.SetDefaultSignInAsAuthenticationType(CookieAuthenticationDefaults.AuthenticationType);
-
-            app.Use(typeof(ConditionalMiddlewareInvoker));
 
             app.UseCookieAuthentication(new CookieAuthenticationOptions());
 
@@ -61,7 +47,7 @@ namespace MVCO365Demo
                     // {
                     //    RequireNonce = false,
                     // },
-
+                    Resource = "https://graph.microsoft.com",
                     TokenValidationParameters = new System.IdentityModel.Tokens.TokenValidationParameters
                     {
                         // instead of using the default validation (validating against a single issuer value, as we do in line of business apps (single tenant apps)), 
@@ -84,16 +70,22 @@ namespace MVCO365Demo
                         AuthorizationCodeReceived = (context) =>
                         {
                             var code = context.Code;
-
                             ClientCredential credential = new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey);
+
                             string tenantId = context.AuthenticationTicket.Identity.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
                             string signInUserId = context.AuthenticationTicket.Identity.FindFirst(ClaimTypes.NameIdentifier).Value;
 
-                            AuthenticationContext authContext = new AuthenticationContext(string.Format(AADAppSettings.AuthorizationUri, tenantId), new ADALTokenCache(signInUserId));
+                            var authContext = new AuthenticationContext(AADAppSettings.Authority, 
+                                new InMemoryTokenCache(signInUserId));
 
                             // Get the access token for AAD Graph. Doing this will also initialize the token cache associated with the authentication context
                             // In theory, you could acquire token for any service your application has access to here so that you can initialize the token cache
-                            AuthenticationResult result = authContext.AcquireTokenByAuthorizationCode(code, new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path)), credential, AADAppSettings.AADGraphResourceId);
+                            AuthenticationResult result = authContext.AcquireTokenByAuthorizationCode(code, 
+                                new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path)), 
+                                credential, 
+                                AADAppSettings.AADGraphResourceId);
+
+                            Console.WriteLine($"Authenticated user unique ID: {result.UserInfo.UniqueId}");
 
                             return Task.FromResult(0);
                         },
