@@ -62,7 +62,7 @@ namespace MVCO365Demo.Controllers
 
             string authorizationRequest = String.Format("",
                 //AADAppSettings.ConsentUri,
-                    Uri.EscapeDataString(AADAppSettings.ClientId),
+                    Uri.EscapeDataString(AuthHelper.Default.ClientId),
                     Uri.EscapeDataString(strResource),
                     Uri.EscapeDataString(String.Format("{0}/{1}", this.Request.Url.GetLeftPart(UriPartial.Authority).ToString(), strRedirectController))
                     );
@@ -84,13 +84,6 @@ namespace MVCO365Demo.Controllers
             {
                 string signInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.Upn).Value;
                 strResource = signInUserId.Substring(signInUserId.IndexOf('@') + 1);
-                if (strResource.ToUpper() == "MICROSOFT.COM")
-                {
-                    if (AADAppSettings.Authority.Contains("-ppe"))
-                        strResource = "msft.spoppe.com";
-                    else
-                        strResource = "Microsoft.SharePoint.com";
-                }
                 strResource = "https://" + strResource;
             }
             string strRedirectController = Request.QueryString["redirect"];
@@ -101,7 +94,7 @@ namespace MVCO365Demo.Controllers
 
             string authorizationRequest = String.Format("", 
                 //AADAppSettings.AdminConsentUri,
-                    Uri.EscapeDataString(AADAppSettings.ClientId),
+                    Uri.EscapeDataString(AuthHelper.Default.ClientId),
                     Uri.EscapeDataString(strResource),
                     Uri.EscapeDataString(String.Format("{0}/{1}", this.Request.Url.GetLeftPart(UriPartial.Authority).ToString(), strRedirectController)),
                     Uri.EscapeDataString("admin_consent")

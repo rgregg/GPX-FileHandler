@@ -1,10 +1,11 @@
-﻿@{
+﻿@model MVCO365Demo.Models.GPXFileViewModel
+@{
     Layout = null;
 }
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
 <head>
-    <title></title>
+    <title>GPX File Handler Sample - @Model.Title</title>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <link href="~/Content/bootstrap-theme.min.css" rel="stylesheet" />
     <link href="~/Content/bootstrap.min.css" rel="stylesheet" />
@@ -29,7 +30,7 @@
                     <ul class="nav navbar-nav navbar-right">
                         <li><a href="#test_modal" data-toggle="modal" data-target="#basicModal">Edit Metadata</a></li>
                         <li class="dropdown">
-                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">@ViewBag.Name<span class="caret"></span></a>
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown">@Model.Title<span class="caret"></span></a>
                             <ul class="dropdown-menu" role="menu">
                                 <li><a href="#">@Html.ActionLink("Sign out", "SignOut", "Account")</a></li>
                             </ul>
@@ -43,9 +44,12 @@
     <div id="mapDiv"></div>
     <ul class="hiddenCoordinateList" style="display:none;">
         @{
-            foreach (MVCO365Demo.Controllers.GeoCoordinate coordinate in ViewBag.Coordinates)
+            if (Model.Coordinates != null)
             {
+                foreach (MVCO365Demo.Models.GeoCoordinate coordinate in Model.Coordinates)
+                {
                 <li>@coordinate</li>
+                }
             }
         }
     </ul>
@@ -59,7 +63,7 @@
                 </div>
                 <div class="modal-body">
                     Title:
-                    <input type="text" class="form-control" id="titleField" placeholder="@ViewBag.Title">
+                    <input type="text" class="form-control" id="titleField" placeholder="@Model.Title">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>

@@ -1,32 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Web;
-using System.Xml;
-
-namespace MVCO365Demo.Controllers
+﻿namespace MVCO365Demo.Controllers
 {
-    //struct to read all the points from the GPX file
-    public struct GeoCoordinate
-    {
-        private readonly String latitude;
-        private readonly String longitude;
-
-        public String Latitude { get { return latitude; } }
-        public String Longitude { get { return longitude; } }
-
-        public GeoCoordinate(String latitude, String longitude)
-        {
-            this.latitude = latitude;
-            this.longitude = longitude;
-        }
-
-        public override string ToString()
-        {
-            return string.Format("{0},{1}", this.latitude, this.longitude);
-        }
-    }
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Web;
+    using System.Xml;
+    using Models;
 
     public class GPXHelper
     {

@@ -26,6 +26,7 @@ using Microsoft.Owin.Security.OpenIdConnect;
 using MVCO365Demo.Models;
 using MVCO365Demo.Utils;
 using Owin;
+using System.Diagnostics;
 
 namespace MVCO365Demo
 {
@@ -40,14 +41,12 @@ namespace MVCO365Demo
             app.UseOpenIdConnectAuthentication(
                 new OpenIdConnectAuthenticationOptions
                 {
-                    ClientId = AADAppSettings.ClientId,
-                    Authority = AADAppSettings.Authority,
-
-                    // ProtocolValidator = new OpenIdConnectProtocolValidator()
-                    // {
-                    //    RequireNonce = false,
-                    // },
-                    Resource = "https://graph.microsoft.com",
+                    Authority = AuthHelper.Default.GenerateAuthorityUrl(),
+                    ClientId = AuthHelper.Default.ClientId,                    
+					ClientSecret = AuthHelper.Default.ClientAppKey,
+                    ResponseType = "code id_token",
+                    Resource = AuthHelper.Default.MicrosoftGraphResourceUri,
+                    PostLogoutRedirectUri = "/",
                     TokenValidationParameters = new System.IdentityModel.Tokens.TokenValidationParameters
                     {
                         // instead of using the default validation (validating against a single issuer value, as we do in line of business apps (single tenant apps)), 
@@ -63,31 +62,56 @@ namespace MVCO365Demo
 
                         ValidateIssuer = false
                     },
-
                     Notifications = new OpenIdConnectAuthenticationNotifications()
                     {
-                        //If there is a code in the OpenID Connect response, redeem it for an access token and refresh token, and store those away. 
-                        AuthorizationCodeReceived = (context) =>
+                        SecurityTokenValidated = (context) =>
+                        {
+                            // If your authentication logic is based on users then add your logic here
+                            return Task.FromResult(0);
+                        },
+                        AuthenticationFailed = (context) =>
+                        {
+                            // Pass in the context back to the app
+                            string message = Uri.EscapeDataString(context.Exception.Message);
+                            context.OwinContext.Response.Redirect("/Home/Error?msg=" + message);
+                            context.HandleResponse(); // Suppress the exception
+                            return Task.FromResult(0);
+                        },
+                        AuthorizationCodeReceived = async (context) =>
                         {
                             var code = context.Code;
-                            ClientCredential credential = new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey);
 
-                            string tenantId = context.AuthenticationTicket.Identity.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
-                            string signInUserId = context.AuthenticationTicket.Identity.FindFirst(ClaimTypes.NameIdentifier).Value;
+                            var authHelper = AuthHelper.Default;
 
-                            var authContext = new AuthenticationContext(AADAppSettings.Authority, 
-                                new InMemoryTokenCache(signInUserId));
+                            string signInUserId = context.AuthenticationTicket.Identity.FindFirst(AuthHelper.ObjectIdentifierClaim).Value;
 
-                            // Get the access token for AAD Graph. Doing this will also initialize the token cache associated with the authentication context
-                            // In theory, you could acquire token for any service your application has access to here so that you can initialize the token cache
-                            AuthenticationResult result = authContext.AcquireTokenByAuthorizationCode(code, 
-                                new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path)), 
-                                credential, 
-                                AADAppSettings.AADGraphResourceId);
+                            var authContext = authHelper.GetAuthContext("common", signInUserId);
+                            var appCredential = authHelper.GetClientCredential();
 
-                            Console.WriteLine($"Authenticated user unique ID: {result.UserInfo.UniqueId}");
+                            // Returns an accessToken with aud: https://graph.microsoft.com, and a refreshToken
+                            AuthenticationResult result = await authContext.AcquireTokenByAuthorizationCodeAsync(
+                                authorizationCode: context.Code,
+                                redirectUri: new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path)), 
+                                clientCredential: appCredential, 
+                                resource: authHelper.MicrosoftGraphResourceUri);
 
-                            return Task.FromResult(0);
+
+
+                            var authContext2 = authHelper.GetAuthContext(result.TenantId, signInUserId);
+
+                            try
+                            {
+                                var tokenResult = await authContext2.AcquireTokenSilentAsync(authHelper.MicrosoftGraphResourceUri,
+                                    appCredential, 
+                                    new UserIdentifier(signInUserId, UserIdentifierType.UniqueId));
+                                Debug.WriteLine($"Slient token: {tokenResult.AccessToken}");
+                            }
+                            catch (Exception ex)
+                            {
+                                // Exception is thrown indicating I can’t acquire a token silently
+
+                                Debug.WriteLine($"Life is unexpected: {ex.Message}");
+                            }
                         },
 
                         RedirectToIdentityProvider = (context) =>
@@ -100,20 +124,12 @@ namespace MVCO365Demo
                             context.ProtocolMessage.PostLogoutRedirectUri = appBaseUrl;
 
                             // Save the form in the cookie to prevent it from getting lost in the login redirect
-                            FormDataCookie cookie = new FormDataCookie(AADAppSettings.SavedFormDataName);
+                            FormDataCookie cookie = new FormDataCookie(AuthHelper.SavedFormDataName);
                             cookie.SaveRequestFormToCookie();
 
                             return Task.FromResult(0);
                         }
-
-                        // AuthenticationFailed = (context) =>
-                        // {
-                        //    // Suppress the exception if you don't want to see the error
-                        //   // context.HandleResponse();
-                        //    return Task.FromResult(0);
-                        // }
                     }
-
                 });
         }
     }

@@ -1,4 +1,5 @@
-﻿@{
+﻿@model MVCO365Demo.Models.GPXFileViewModel
+@{
     Layout = null;
 }
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -16,7 +17,7 @@
     <div id="mapDiv"></div>
     <ul class="hiddenCoordinateList" style="display:none;">
         @{
-            foreach (MVCO365Demo.Controllers.GeoCoordinate coordinate in ViewBag.Coordinates)
+            foreach (MVCO365Demo.Models.GeoCoordinate coordinate in Model.Coordinates)
             {
                 <li>@coordinate</li>
             }

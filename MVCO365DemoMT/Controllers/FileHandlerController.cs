@@ -22,111 +22,27 @@ namespace MVCO365Demo.Controllers
 
         public async Task<ActionResult> Preview()
         {
-            var signInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.NameIdentifier).Value;
-            var userObjectId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier").Value;
-            var tenantId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
-            String token = null;
-            AuthenticationContext authContext = new AuthenticationContext(AADAppSettings.Authority, new InMemoryTokenCache(signInUserId));
-            AuthenticationResult authResult = null;
-
-            try
-            {
-                ActivationParameters parameters = this.LoadActivationParameters();
-                authResult = await authContext.AcquireTokenSilentAsync(parameters.ResourceId, new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey), new UserIdentifier(userObjectId, UserIdentifierType.UniqueId));
-                token = authResult.AccessToken;
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(parameters.FileGet);
-                request.Headers.Add("Authorization: bearer " + token);
-                Stream responseStream = request.GetResponse().GetResponseStream();
-
-                bool complete = gpxUtils.LoadGPXFromStream(responseStream);
-                if (complete)
-                {
-                    ViewBag.Coordinates = gpxUtils.getPointsFromGPX();
-                    return View();
-                }
-            }
-            catch (AdalException exception)
-            {
-                //handle token acquisition failure
-                if (exception.ErrorCode == AdalError.FailedToAcquireTokenSilently)
-                {
-                    authContext.TokenCache.Clear();
-                    return Content(exception.Message);
-                }
-            }
-
-            return Content("GPX file could not be loaded.");
-
+            var input = GetActivationParameters();
+            var viewModel = await GetGPXViewModelAsync(input, readOnly: true);
+            return View(viewModel);
         }
 
         public async Task<ActionResult> Open()
         {
-            ActivationParameters parameters = this.LoadActivationParameters();
-            await HttpContext.GetOwinContext().Authentication.AuthenticateAsync(OpenIdConnectAuthenticationDefaults.AuthenticationType);
-
-            //load activation parameters and all the stuff you need to get a token
-            var signInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.NameIdentifier).Value;
-            var userObjectId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier").Value;
-            var tenantId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
-
-            Console.WriteLine($"FileHandler invoked, user unique ID: {userObjectId}");
-
-            String token = null;
-            AuthenticationContext authContext = new AuthenticationContext(AADAppSettings.Authority, new InMemoryTokenCache(signInUserId));
-            AuthenticationResult authResult = null;
-            Session[AADAppSettings.SavedFormDataName] = parameters;
-
-            try
-            {
-                //grab the token
-                authResult = await authContext.AcquireTokenSilentAsync(parameters.ResourceId, 
-                    new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey), 
-                    new UserIdentifier(userObjectId, UserIdentifierType.UniqueId));
-                token = authResult.AccessToken;
-
-                //assemble request to get the file
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(parameters.FileGet.Replace("''", "'"));
-                request.Headers.Add("Authorization: bearer " + token);
-                Stream responseStream = request.GetResponse().GetResponseStream();
-
-                //get the file & load it into a gpx file
-                bool complete = gpxUtils.LoadGPXFromStream(responseStream);
-                Session[DocumentKey] = gpxUtils;
-                if (complete)
-                {
-                    //set the name of the user, the different coordinates to map out, and the title of the track
-                    ViewBag.Name = ClaimsPrincipal.Current.FindFirst(ClaimTypes.GivenName).Value + " " + ClaimsPrincipal.Current.FindFirst(ClaimTypes.Surname).Value;
-                    ViewBag.Coordinates = gpxUtils.getPointsFromGPX();
-                    ViewBag.Title = gpxUtils.getTitle();
-                    return View();
-                }
-            }
-            catch (AdalException exception)
-            {
-                //handle token acquisition failure
-                if (exception.ErrorCode == AdalError.FailedToAcquireTokenSilently)
-                {
-                    authContext.TokenCache.Clear();
-                    return Content(exception.Message);
-                }
-            }
-            catch (Exception exception)
-            {
-                authContext.TokenCache.Clear();
-                return Content(exception.Message);
-            }
-
-            return Content("GPX file could not be loaded.<br/>Token: " + token + "<br/> FileGet URL: " + parameters.FileGet);
+            var input = GetActivationParameters();
+            var viewModel = await GetGPXViewModelAsync(input, readOnly: false);
+            return View(viewModel);
         }
 
         public async Task<ActionResult> Save(string newName)
         {
             //grab all the stuff you need to get a token
-            var signInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.NameIdentifier).Value;
-            var userObjectId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier").Value;
+            //var signInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.NameIdentifier).Value;
+            //var userObjectId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier").Value;
             //var tenantId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
 
-            AuthenticationContext authContext = new AuthenticationContext(AADAppSettings.Authority, new InMemoryTokenCache(signInUserId));
+            var authContext = AuthHelper.Default.GetAuthContext(ClaimsPrincipal.Current);
+            //AuthenticationContext authContext = new AuthenticationContext(AADAppSettings.Authority, InMemoryTokenCache.TokenCacheForUser(signInUserId));
 
             //change the name in the file
             gpxUtils = Session[DocumentKey] as GPXHelper;
@@ -136,11 +52,9 @@ namespace MVCO365Demo.Controllers
             try
             {
                 //grab activation parameters (this was set in Open controller)
-                ActivationParameters parameters = Session[AADAppSettings.SavedFormDataName] as ActivationParameters;
+                ActivationParameters parameters = Session[AuthHelper.SavedFormDataName] as ActivationParameters;
 
-                //grab token
-                var authResult = await authContext.AcquireTokenSilentAsync(parameters.ResourceId, new ClientCredential(AADAppSettings.ClientId, AADAppSettings.AppKey), new UserIdentifier(userObjectId, UserIdentifierType.UniqueId));
-                var token = authResult.AccessToken;
+                var token = await AuthHelper.Default.GetUserAccessTokenSilentAsync(AuthHelper.Default.MicrosoftGraphResourceUri, ClaimsPrincipal.Current);
 
                 //create request to write file back to server
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(parameters.FilePut);
@@ -181,11 +95,11 @@ namespace MVCO365Demo.Controllers
             }
         }
 
-        private ActivationParameters LoadActivationParameters()
+        private ActivationParameters GetActivationParameters()
         {
             ActivationParameters parameters;
 
-            FormDataCookie cookie = new FormDataCookie(AADAppSettings.SavedFormDataName);
+            FormDataCookie cookie = new FormDataCookie(AuthHelper.SavedFormDataName);
             if (Request.Form != null && Request.Form.AllKeys.Count<string>() != 0)
             {
                 // get from current request's form data
@@ -200,9 +114,52 @@ namespace MVCO365Demo.Controllers
             }
             else
             {
-                parameters = (ActivationParameters)Session[AADAppSettings.SavedFormDataName];
+                parameters = (ActivationParameters)Session[AuthHelper.SavedFormDataName];
             }
             return parameters;
         }
+
+        private async Task<GPXFileViewModel> GetGPXViewModelAsync(ActivationParameters parameters, bool readOnly = false)
+        {
+            if (null == parameters)
+            {
+                return GPXFileViewModel.GetErrorModel(null, "Activation parameters were missing. Please try to launch the previewer from OneDrive or SharePoint again.");
+            }
+
+            string accessToken = await AuthHelper.Default.GetUserAccessTokenSilentAsync(parameters.ResourceId, ClaimsPrincipal.Current);
+            if (accessToken == null)
+            {
+                return GPXFileViewModel.GetErrorModel(parameters, "Unable to retrieve an access token from AAD.");
+            }
+
+            // Get file content
+            try
+            {
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(parameters.FileGet);
+                request.Headers.Add("Authorization", $"Bearer {accessToken}");
+                Stream responseStream = request.GetResponse().GetResponseStream();
+
+                bool complete = gpxUtils.LoadGPXFromStream(responseStream);
+                if (complete)
+                {
+                    return new GPXFileViewModel(parameters)
+                    {
+                        Coordinates = gpxUtils.getPointsFromGPX(),
+                        ReadOnly = readOnly,
+                        SignedInUserName = ClaimsPrincipal.Current.FindFirst(ClaimTypes.GivenName).Value + " " + ClaimsPrincipal.Current.FindFirst(ClaimTypes.Surname).Value,
+                        Title = gpxUtils.getTitle()
+                   };
+                }
+                else
+                {
+                    return GPXFileViewModel.GetErrorModel(parameters, "Unable to parse GPX data file.");
+                }
+            }
+            catch (Exception ex)
+            {
+                return GPXFileViewModel.GetErrorModel(parameters, ex);
+            }
+        }
+
     }
 }

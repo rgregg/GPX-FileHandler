@@ -1,98 +1,59 @@
 ﻿using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace MVCO365Demo.Models
 {
     public class InMemoryTokenCache : TokenCache
     {
-        private static Dictionary<string, UserTokenCache> TokenCacheState = new Dictionary<string, UserTokenCache>();
+        private static Dictionary<string, InMemoryTokenCache> TokenCacheState = new Dictionary<string, InMemoryTokenCache>();
 
-        public string User { get; set; }
-        private UserTokenCache CacheEntry { get; set; }
+        public string User { get; private set; }
 
-        public InMemoryTokenCache(string user)
+        public static InMemoryTokenCache TokenCacheForUser(string user)
         {
+            user = "shared-token-cache";
+
+            InMemoryTokenCache instance;
+            if (!TokenCacheState.TryGetValue(user, out instance))
+            {
+                instance = new InMemoryTokenCache(user);
+                TokenCacheState[user] = instance;
+            }
+            return instance;
+        }
+
+        private InMemoryTokenCache(string user)
+        {
+            Debug.WriteLine($"Creating a new TokenCache object for {user}.");
             // associate the cache to the current user of the web app
             this.User = user;
             this.AfterAccess = AfterAccessNotification;
             this.BeforeAccess = BeforeAccessNotification;
             this.BeforeWrite = BeforeWriteNotification;
 
-            // look up the entry in the DB
-            UserTokenCache cachedEntry;
-            if (TokenCacheState.TryGetValue(user, out cachedEntry))
-            {
-                this.CacheEntry = cachedEntry;
-            }
-
-            // place the entry in memory
-            var cachedBits = this.CacheEntry?.cacheBits;
-            this.Deserialize(cachedBits);
+            this.Deserialize(null);
         }
         
-        // clean up the DB
-        public override void Clear()
-        {
-            base.Clear();
-
-            TokenCacheState.Remove(this.User);
-        }
-
         // Notification raised before ADAL accesses the cache.
         // This is your chance to update the in-memory copy from the DB, if the in-memory version is stale
         void BeforeAccessNotification(TokenCacheNotificationArgs args)
         {
-            if (this.CacheEntry == null)
-            {
-                // first time access
-                UserTokenCache cachedEntry;
-                if (TokenCacheState.TryGetValue(this.User, out cachedEntry))
-                {
-                    this.CacheEntry = cachedEntry;
-                    var cachedBits = this.CacheEntry?.cacheBits;
-                    this.Deserialize(cachedBits);
-                }
-            }
-            else
-            {   // retrieve last write from the DB
-                UserTokenCache cachedEntry;
-                if (TokenCacheState.TryGetValue(this.User, out cachedEntry) && (cachedEntry.LastWrite > CacheEntry.LastWrite))
-                {
-                    // Our in-memory copy is older than the cached state, so we need to update
-                    this.CacheEntry = cachedEntry;
-                    var cachedBits = this.CacheEntry?.cacheBits;
-                    this.Deserialize(cachedBits);
-                }
-            }
+            Debug.WriteLine($"BeforeAccessNotification for {args.Resource} as {User}, unique-id: {args.UniqueId}.");
         }
 
         // Notification raised after ADAL accessed the cache.
         // If the HasStateChanged flag is set, ADAL changed the content of the cache
         void AfterAccessNotification(TokenCacheNotificationArgs args)
         {
-            // if state changed
-            if (this.HasStateChanged)
-            {
-                if (this.CacheEntry == null)
-                {
-                    this.CacheEntry = new UserTokenCache();
-                }
-                this.CacheEntry.webUserUniqueId = User;
-                this.CacheEntry.cacheBits = this.Serialize();
-                this.CacheEntry.LastWrite = DateTime.UtcNow;
-
-                //// update the DB and the lastwrite
-                TokenCacheState[this.User] = this.CacheEntry;
-                this.CacheEntry.UserTokenCacheId = this.User.GetHashCode();
-
-                this.HasStateChanged = false;
-            }
+            Debug.WriteLine($"AfterAccessNotification for {args.Resource} as {User}, unique-id: {args.UniqueId}.");
         }
 
         void BeforeWriteNotification(TokenCacheNotificationArgs args)
         {
             // if you want to ensure that no concurrent write take place, use this notification to place a lock on the entry
+            Debug.WriteLine($"BeforeWriteNotitification for {User}, resource: {args.Resource}.");
         }
     }
 }
