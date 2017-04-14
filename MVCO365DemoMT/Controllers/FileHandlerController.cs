@@ -17,7 +17,7 @@ namespace MVCO365Demo.Controllers
     [Authorize]
     public class FileHandlerController : Controller
     {
-        private GPXHelper gpxUtils = new GPXHelper();
+        private GPXFile gpxUtils = new GPXFile();
         public static readonly string DocumentKey = "XML_DOCUMENT_KEY";
 
         public async Task<ActionResult> Preview()
@@ -36,17 +36,16 @@ namespace MVCO365Demo.Controllers
 
         public async Task<ActionResult> Save(string newName)
         {
-            //grab all the stuff you need to get a token
-            //var signInUserId = ClaimsPrincipal.Current.FindFirst(ClaimTypes.NameIdentifier).Value;
-            //var userObjectId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/objectidentifier").Value;
-            //var tenantId = ClaimsPrincipal.Current.FindFirst("http://schemas.microsoft.com/identity/claims/tenantid").Value;
-
             var authContext = AuthHelper.Default.GetAuthContext(ClaimsPrincipal.Current);
-            //AuthenticationContext authContext = new AuthenticationContext(AADAppSettings.Authority, InMemoryTokenCache.TokenCacheForUser(signInUserId));
 
             //change the name in the file
-            gpxUtils = Session[DocumentKey] as GPXHelper;
-            gpxUtils.setTitle(newName);
+            var gpxData = Session[DocumentKey] as GPXFile;
+
+            if (gpxData.Metadata == null)
+            {
+                gpxData.Metadata = new Models.GPXMetadata();
+            }
+            gpxData.Metadata.Name = newName;
 
             Stream fileStream = null;
             try
@@ -62,9 +61,10 @@ namespace MVCO365Demo.Controllers
                 request.Method = "PUT";
 
                 //write bytes to stream
-                byte[] xmlByteArray = Encoding.Default.GetBytes(gpxUtils.doc.OuterXml);
-                fileStream = request.GetRequestStream();
-                fileStream.Write(xmlByteArray, 0, xmlByteArray.Length);
+                using (fileStream = request.GetRequestStream())
+                {
+                    gpxData.SerializeToStream(fileStream);
+                }
 
                 //send file over & respond as the workload does
                 HttpWebResponse response = (HttpWebResponse)request.GetResponse();
@@ -129,7 +129,7 @@ namespace MVCO365Demo.Controllers
             string accessToken = await AuthHelper.Default.GetUserAccessTokenSilentAsync(parameters.ResourceId, ClaimsPrincipal.Current);
             if (accessToken == null)
             {
-                return GPXFileViewModel.GetErrorModel(parameters, "Unable to retrieve an access token from AAD.");
+                return GPXFileViewModel.GetErrorModel(parameters, "Unable to retrieve an access token for data source.");
             }
 
             // Get file content
@@ -139,15 +139,15 @@ namespace MVCO365Demo.Controllers
                 request.Headers.Add("Authorization", $"Bearer {accessToken}");
                 Stream responseStream = request.GetResponse().GetResponseStream();
 
-                bool complete = gpxUtils.LoadGPXFromStream(responseStream);
-                if (complete)
+                var gpxData = GPXFile.FromStream(responseStream);
+                if (gpxData != null)
                 {
                     return new GPXFileViewModel(parameters)
                     {
-                        Coordinates = gpxUtils.getPointsFromGPX(),
+                        Coordinates = gpxData.Route.FirstOrDefault()?.Points,
                         ReadOnly = readOnly,
                         SignedInUserName = ClaimsPrincipal.Current.FindFirst(ClaimTypes.GivenName).Value + " " + ClaimsPrincipal.Current.FindFirst(ClaimTypes.Surname).Value,
-                        Title = gpxUtils.getTitle()
+                        Title = gpxData.Route.FirstOrDefault()?.Name ?? gpxData.Metadata?.Name
                    };
                 }
                 else

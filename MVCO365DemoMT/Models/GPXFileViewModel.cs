@@ -11,7 +11,7 @@ namespace MVCO365Demo.Models
 
         public string ErrorMessage { get; set; }
 
-        public List<GeoCoordinate> Coordinates { get; set; }
+        public GeoCoordinate[] Coordinates { get; set; }
 
         public string Title { get; set; }
 

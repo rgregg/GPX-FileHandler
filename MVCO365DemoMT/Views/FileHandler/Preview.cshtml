@@ -19,7 +19,7 @@
         @{
             foreach (MVCO365Demo.Models.GeoCoordinate coordinate in Model.Coordinates)
             {
-                <li>@coordinate</li>
+                <li>@string.Format("{0},{1}", coordinate.Latitude, coordinate.Longitude)</li>
             }
         }
     </ul>

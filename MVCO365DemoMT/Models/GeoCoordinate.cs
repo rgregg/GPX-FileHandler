@@ -2,30 +2,41 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace MVCO365Demo.Models
 {
+    [XmlRoot("rtept")]
     public class GeoCoordinate
     {
+        [XmlAttribute("lat", Namespace = GPXFile.NS_GPX)]
         public string Latitude
         {
-            get;
-            private set;
+            get; set;
         }
+
+        [XmlAttribute("lon", Namespace = GPXFile.NS_GPX)]
         public string Longitude
         {
-            get; private set;
+            get; set;
         }
 
-        public GeoCoordinate(string latitude, string longitude)
+        [XmlElement("name", Namespace = GPXFile.NS_GPX)]
+        public string Name
         {
-            this.Latitude = latitude;
-            this.Longitude = longitude;
+            get; set;
         }
 
-        public override string ToString()
+        [XmlElement("cmt", Namespace = GPXFile.NS_GPX)]
+        public string Comment
         {
-            return $"{Latitude},{Longitude}";
+            get; set;
+        }
+
+        public GeoCoordinate()
+        {
+
         }
     }
 }

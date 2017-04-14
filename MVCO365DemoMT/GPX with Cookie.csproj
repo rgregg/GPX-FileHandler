@@ -153,7 +153,7 @@
     <Compile Include="AuthHelper.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="Controllers\FileHandlerController.cs" />
-    <Compile Include="Controllers\GPXHelper.cs" />
+    <Compile Include="Models\GPXFile.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
@@ -161,8 +161,15 @@
     <Compile Include="Models\ActivationParameters.cs" />
     <Compile Include="Models\GeoCoordinate.cs" />
     <Compile Include="Models\GPXFileViewModel.cs" />
+    <Compile Include="Models\GPXMetadata.cs" />
+    <Compile Include="Models\GPXRoute.cs" />
     <Compile Include="Models\InMemoryTokenCache.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="Startup.cs" />
     <Compile Include="Utils\FormDataCookie.cs" />
   </ItemGroup>
@@ -199,6 +206,7 @@
     <None Include="Properties\PublishProfiles\offorofficefileapp-int.pubxml" />
     <None Include="Properties\PublishProfiles\offorofficefileappmt-int.pubxml" />
     <None Include="Properties\PublishProfiles\testorinifileapp-int.pubxml" />
+    <None Include="Resources\JULY_24_SIGNAGE___VOLUNTEERS.gpx" />
     <None Include="Scripts\jquery-2.1.1.intellisense.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
@@ -241,6 +249,12 @@
     <Content Include="packages.config">
       <SubType>Designer</SubType>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
