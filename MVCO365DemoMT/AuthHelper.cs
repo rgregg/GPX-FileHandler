@@ -36,22 +36,26 @@ namespace MVCO365Demo
 
     public class AuthHelper
     {
-        private static AuthHelper DefaultAuthHelper = new AuthHelper();
+        private static AuthHelper StaticAuthHelper = new AuthHelper();
         public static AuthHelper Default
         {
-            get { return DefaultAuthHelper; }
+            get
+            {
+                return StaticAuthHelper;
+            }
         }
 
         public string ClientId { get; private set; }
         public string ClientAppKey { get; private set; }
         public string AuthorityUrlTemplate { get; private set; }
-        public string MicrosoftGraphResourceUri { get { return "https://graph.microsoft.com"; } }
+        public string MicrosoftGraphResourceUri { get; private set; }
 
         private AuthHelper()
         {
             this.ClientId = ConfigurationManager.AppSettings["ida:ClientId"];
             this.ClientAppKey = ConfigurationManager.AppSettings["ida:AppKey"];
             this.AuthorityUrlTemplate = ConfigurationManager.AppSettings["ida:Authority"];
+            this.MicrosoftGraphResourceUri = ConfigurationManager.AppSettings["ida:MicrosoftGraphResource"];
 
             Debug.Assert(!ClientId.Equals("[clientId]"), "You must specify an AAD application client-id before running this project.");
             Debug.Assert(!ClientAppKey.Equals("[secret]"), "You must specify the AAD application app key before running this project.");
