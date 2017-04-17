@@ -13,6 +13,8 @@ namespace MVCO365Demo.Models
 
         public GeoCoordinate[] Coordinates { get; set; }
 
+        public string GPXFileData { get; set; }
+
         public string Title { get; set; }
 
         public string SignedInUserName { get; set; }

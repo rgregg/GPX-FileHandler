@@ -57,7 +57,7 @@ namespace MVCO365Demo.Controllers
 
                 //create request to write file back to server
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(parameters.FilePut);
-                request.Headers.Add("Authorization: bearer " + token);
+                request.Headers.Add("Authorization", $"Bearer {token}");
                 request.Method = "PUT";
 
                 //write bytes to stream
@@ -116,6 +116,8 @@ namespace MVCO365Demo.Controllers
             {
                 parameters = (ActivationParameters)Session[AuthHelper.SavedFormDataName];
             }
+
+            Session[AuthHelper.SavedFormDataName] = parameters;
             return parameters;
         }
 
@@ -142,6 +144,7 @@ namespace MVCO365Demo.Controllers
                 var gpxData = GPXFile.FromStream(responseStream);
                 if (gpxData != null)
                 {
+                    Session[DocumentKey] = gpxData;
                     return new GPXFileViewModel(parameters)
                     {
                         Coordinates = gpxData.Route.FirstOrDefault()?.Points,
