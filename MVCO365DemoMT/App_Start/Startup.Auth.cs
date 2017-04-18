@@ -80,7 +80,6 @@ namespace MVCO365Demo
                         AuthorizationCodeReceived = async (context) =>
                         {
                             var code = context.Code;
-
                             var authHelper = AuthHelper.Default;
 
                             string signInUserId = context.AuthenticationTicket.Identity.FindFirst(AuthHelper.ObjectIdentifierClaim).Value;
